@@ -26,10 +26,9 @@ func CopyTree[T any](t *Node[T]) *Node[T] {
 		copy(nn.prefix, t.prefix)
 	}
 	if len(t.edges) != 0 {
-		nn.edges = make([]edge[T], len(t.edges))
+		nn.edges = make([]*Node[T], len(t.edges))
 		for idx, edge := range t.edges {
-			nn.edges[idx].label = edge.label
-			nn.edges[idx].node = CopyTree(edge.node)
+			nn.edges[idx] = CopyTree(edge)
 		}
 	}
 	return nn
