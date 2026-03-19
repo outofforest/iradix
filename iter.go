@@ -125,12 +125,12 @@ func (i *Iterator[T]) Back(count uint64) {
 
 func (i *Iterator[T]) peek() *Node[T] {
 	itm := i.stack[len(i.stack)-1]
-	return itm.edges[itm.index1].node
+	return itm.edges[itm.index1]
 }
 
 func (i *Iterator[T]) pop() *Node[T] {
 	itm := i.stack[len(i.stack)-1]
-	n := itm.edges[itm.index1].node
+	n := itm.edges[itm.index1]
 
 	i.stack[len(i.stack)-1].index1++
 	i.stack[len(i.stack)-1].index2++
@@ -148,7 +148,7 @@ func (i *Iterator[T]) forward() *Node[T] {
 		return nil
 	}
 
-	n := itm.edges[itm.index2].node
+	n := itm.edges[itm.index2]
 	itm.index1++
 	itm.index2++
 
@@ -172,14 +172,14 @@ func (i *Iterator[T]) backward() *Node[T] {
 		if itm.index1 == itm.index2 {
 			itm.index1--
 			itm.index2--
-			return itm.edges[itm.index1].node
+			return itm.edges[itm.index1]
 		}
 		return nil
 	}
 
 	if itm.index1 == itm.index2 {
 		itm.index2--
-		n := itm.edges[itm.index2].node
+		n := itm.edges[itm.index2]
 		if len(n.edges) > 0 {
 			i.stack = append(i.stack, item[T]{edges: n.edges, index1: len(n.edges), index2: len(n.edges)})
 			return nil
@@ -187,13 +187,13 @@ func (i *Iterator[T]) backward() *Node[T] {
 	}
 
 	itm.index1--
-	return itm.edges[itm.index1].node
+	return itm.edges[itm.index1]
 }
 
 func (i *Iterator[T]) findMin(n *Node[T]) {
 	for {
 		i.stack = append(i.stack, item[T]{edges: n.edges, index1: 0, index2: 0})
-		n = n.edges[0].node
+		n = n.edges[0]
 		if n.value != nil {
 			return
 		}
@@ -205,13 +205,11 @@ func (i *Iterator[T]) initStack() {
 	i.stack = []item[T]{
 		{
 			edges: edges[T]{
-				{
-					node: &Node[T]{
-						revision: i.node.revision,
-						value:    i.node.value,
-						prefix:   i.node.prefix[i.skip:],
-						edges:    i.node.edges,
-					},
+				&Node[T]{
+					revision: i.node.revision,
+					value:    i.node.value,
+					prefix:   i.node.prefix[i.skip:],
+					edges:    i.node.edges,
 				},
 			},
 			index1: 0,

@@ -4,12 +4,6 @@ import (
 	"bytes"
 )
 
-// edge is used to represent an edge node.
-type edge[T any] struct {
-	label byte
-	node  *Node[T]
-}
-
 // Node is an immutable node in the radix tree.
 type Node[T any] struct {
 	revision uint64
@@ -55,9 +49,9 @@ func (n *Node[T]) Iterator() *Iterator[T] {
 	return &Iterator[T]{node: n}
 }
 
-func (n *Node[T]) addEdge(e edge[T]) {
+func (n *Node[T]) addEdge(e *Node[T]) {
 	num := len(n.edges)
-	idx := search[T](n.edges, e.label)
+	idx := search[T](n.edges, e.prefix[0])
 	n.edges = append(n.edges, e)
 	if idx != num {
 		copy(n.edges[idx+1:], n.edges[idx:num])
@@ -65,11 +59,11 @@ func (n *Node[T]) addEdge(e edge[T]) {
 	}
 }
 
-func (n *Node[T]) replaceEdge(e edge[T]) {
+func (n *Node[T]) replaceEdge(e *Node[T]) {
 	num := len(n.edges)
-	idx := search[T](n.edges, e.label)
-	if idx < num && n.edges[idx].label == e.label {
-		n.edges[idx].node = e.node
+	idx := search[T](n.edges, e.prefix[0])
+	if idx < num && n.edges[idx].prefix[0] == e.prefix[0] {
+		n.edges[idx] = e
 		return
 	}
 	panic("replacing missing edge")
@@ -78,8 +72,8 @@ func (n *Node[T]) replaceEdge(e edge[T]) {
 func (n *Node[T]) getEdge(label byte) (int, *Node[T]) {
 	num := len(n.edges)
 	idx := search(n.edges, label)
-	if idx < num && n.edges[idx].label == label {
-		return idx, n.edges[idx].node
+	if idx < num && n.edges[idx].prefix[0] == label {
+		return idx, n.edges[idx]
 	}
 	return -1, nil
 }
@@ -87,9 +81,9 @@ func (n *Node[T]) getEdge(label byte) (int, *Node[T]) {
 func (n *Node[T]) delEdge(label byte) {
 	num := len(n.edges)
 	idx := search(n.edges, label)
-	if idx < num && n.edges[idx].label == label {
+	if idx < num && n.edges[idx].prefix[0] == label {
 		copy(n.edges[idx:], n.edges[idx+1:])
-		n.edges[len(n.edges)-1] = edge[T]{}
+		n.edges[len(n.edges)-1] = nil
 		n.edges = n.edges[:len(n.edges)-1]
 	}
 }
@@ -98,7 +92,7 @@ func (n *Node[T]) getLowerBoundEdge(label byte) (int, *Node[T]) {
 	idx := search(n.edges, label)
 	// we want lower bound behavior so return even if it's not an exact match
 	if idx < len(n.edges) {
-		return idx, n.edges[idx].node
+		return idx, n.edges[idx]
 	}
 	return -1, nil
 }
@@ -112,7 +106,7 @@ func search[T any](es edges[T], label byte) int {
 	for i < j {
 		h := int(uint(i+j) >> 1) // avoid overflow when computing h.
 		// i ≤ h < j
-		if es[h].label < label {
+		if es[h].prefix[0] < label {
 			i = h + 1 // preserves f(i-1) == false
 		} else {
 			j = h // preserves f(j) == true

@@ -70,13 +70,10 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 
 		// No edge, create one
 		if child == nil {
-			nc.addEdge(edge[T]{
-				label: search[0],
-				node: &Node[T]{
-					revision: t.revision,
-					value:    v,
-					prefix:   copyPrefix(search),
-				},
+			nc.addEdge(&Node[T]{
+				revision: t.revision,
+				value:    v,
+				prefix:   copyPrefix(search),
 			})
 			return nil
 		}
@@ -85,7 +82,7 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 		commonPrefix := longestPrefix(search, child.prefix)
 		if commonPrefix == len(child.prefix) {
 			search = search[commonPrefix:]
-			n = &nc.edges[idx].node
+			n = &nc.edges[idx]
 			continue
 		}
 
@@ -94,18 +91,12 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 			revision: t.revision,
 			prefix:   copyPrefix(search[:commonPrefix]),
 		}
-		nc.replaceEdge(edge[T]{
-			label: search[0],
-			node:  splitNode,
-		})
+		nc.replaceEdge(splitNode)
 
 		// Restore the existing child node.
 		modChild := t.writeNode(child)
-		splitNode.addEdge(edge[T]{
-			label: modChild.prefix[commonPrefix],
-			node:  modChild,
-		})
 		modChild.prefix = modChild.prefix[commonPrefix:]
+		splitNode.addEdge(modChild)
 
 		// If the new key is a subset, add to this node.
 		search = search[commonPrefix:]
@@ -115,13 +106,10 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 		}
 
 		// Create a new edge for the node.
-		splitNode.addEdge(edge[T]{
-			label: search[0],
-			node: &Node[T]{
-				revision: t.revision,
-				value:    v,
-				prefix:   copyPrefix(search),
-			},
+		splitNode.addEdge(&Node[T]{
+			revision: t.revision,
+			value:    v,
+			prefix:   copyPrefix(search),
 		})
 		return nil
 	}
@@ -179,7 +167,7 @@ func (t *Txn[T]) writeNode(n *Node[T]) *Node[T] {
 	}
 	if len(n.edges) != 0 {
 		// +2 is for possible new edges, to avoid slice growing later
-		nc.edges = make([]edge[T], len(n.edges), len(n.edges)+2)
+		nc.edges = make([]*Node[T], len(n.edges), len(n.edges)+2)
 		copy(nc.edges, n.edges)
 	}
 
@@ -192,14 +180,13 @@ func (t *Txn[T]) mergeChild(n *Node[T]) {
 	// Mark the child node as being mutated since we are about to abandon
 	// it. We don't need to mark the leaf since we are retaining it if it
 	// is there.
-	e := n.edges[0]
-	child := e.node
+	child := n.edges[0]
 
 	// Merge the nodes.
 	n.prefix = concatPrefixes(n.prefix, child.prefix)
 	n.value = child.value
 	if len(child.edges) != 0 {
-		n.edges = make([]edge[T], len(child.edges))
+		n.edges = make([]*Node[T], len(child.edges))
 		copy(n.edges, child.edges)
 	} else {
 		n.edges = nil
@@ -249,7 +236,7 @@ func (t *Txn[T]) delete(n *Node[T], search []byte) (*Node[T], *T) {
 			t.mergeChild(nc)
 		}
 	} else {
-		nc.edges[idx].node = newChild
+		nc.edges[idx] = newChild
 	}
 	return nc, oldValue
 }
