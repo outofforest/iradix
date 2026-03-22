@@ -5,10 +5,10 @@ import (
 )
 
 // Node is an immutable node in the radix tree.
-type Node[T any] struct {
+type Node[T comparable] struct {
 	revision uint64
 
-	value *T
+	value T
 
 	// prefix is the common prefix we ignore.
 	prefix []byte
@@ -20,7 +20,7 @@ type Node[T any] struct {
 }
 
 // Get traverses nodes to find the value of key.
-func (n *Node[T]) Get(k []byte) *T {
+func (n *Node[T]) Get(k []byte) T {
 	search := k
 	for {
 		// Check for key exhaustion
@@ -31,12 +31,14 @@ func (n *Node[T]) Get(k []byte) *T {
 		// Look for an edge.
 		_, n = n.getEdge(search[0])
 		if n == nil {
-			return nil
+			var o T
+			return o
 		}
 
 		// Consume the search prefix.
 		if !bytes.HasPrefix(search, n.prefix) {
-			return nil
+			var o T
+			return o
 		}
 
 		search = search[len(n.prefix):]
@@ -99,7 +101,7 @@ func (n *Node[T]) getLowerBoundEdge(label byte) (int, *Node[T]) {
 
 // rawIterator is used to return a raw iterator at the given node to walk the
 // tree.
-func search[T any](es edges[T], label byte) int {
+func search[T comparable](es edges[T], label byte) int {
 	// Define f(-1) == false and f(n) == true.
 	// Invariant: f(i-1) == false, f(j) == true.
 	i, j := 0, len(es)

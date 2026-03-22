@@ -4,14 +4,15 @@ import (
 	"bytes"
 )
 
-type item[T any] struct {
+type item[T comparable] struct {
 	edges          edges[T]
 	index1, index2 int
 }
 
 // Iterator is used to iterate over a set of nodes
 // in pre-order.
-type Iterator[T any] struct {
+type Iterator[T comparable] struct {
+	t     T
 	node  *Node[T]
 	stack []item[T]
 	skip  int
@@ -70,7 +71,7 @@ func (i *Iterator[T]) SeekLowerBound(key []byte) {
 			return
 		}
 
-		if prefixCmp > 0 && n.value != nil {
+		if prefixCmp > 0 && n.value != i.t {
 			return
 		}
 
@@ -100,24 +101,25 @@ func (i *Iterator[T]) SeekLowerBound(key []byte) {
 }
 
 // Next returns the next node in order.
-func (i *Iterator[T]) Next() *T {
+func (i *Iterator[T]) Next() T {
 	if i.stack == nil && i.node != nil {
 		i.initStack()
 	}
 
 	for len(i.stack) > 0 {
-		if n := i.forward(); n != nil && n.value != nil {
+		if n := i.forward(); n != nil && n.value != i.t {
 			return n.value
 		}
 	}
-	return nil
+
+	return i.t
 }
 
 // Back moves iterator back.
 func (i *Iterator[T]) Back(count uint64) {
 	for len(i.stack) > 0 && count > 0 {
 		n := i.backward()
-		if n != nil && n.value != nil {
+		if n != nil && n.value != i.t {
 			count--
 		}
 	}
@@ -194,7 +196,7 @@ func (i *Iterator[T]) findMin(n *Node[T]) {
 	for {
 		i.stack = append(i.stack, item[T]{edges: n.edges, index1: 0, index2: 0})
 		n = n.edges[0]
-		if n.value != nil {
+		if n.value != i.t {
 			return
 		}
 		i.pop()

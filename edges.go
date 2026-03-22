@@ -2,7 +2,7 @@ package iradix
 
 import "sort"
 
-type edges[T any] []*Node[T]
+type edges[T comparable] []*Node[T]
 
 func (e edges[T]) Len() int {
 	return len(e)

@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func CopyTree[T any](t *Node[T]) *Node[T] {
+func CopyTree[T comparable](t *Node[T]) *Node[T] {
 	nn := &Node[T]{
 		revision: t.revision,
 		value:    t.value,
@@ -35,7 +35,7 @@ func CopyTree[T any](t *Node[T]) *Node[T] {
 }
 
 func TestRadix_HugeTxn(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 
 	// Insert way more nodes than the cache can fit
 	txn1 := NewTxn(r)
@@ -98,7 +98,7 @@ func TestRadix(t *testing.T) {
 		}
 	}
 
-	r := New[int]()
+	r := New[*int]()
 	rCopy := CopyTree(r)
 	for k, v := range inp {
 		txn := NewTxn(r)
@@ -140,7 +140,7 @@ func TestRadix(t *testing.T) {
 }
 
 func TestRoot(t *testing.T) {
-	r := New[bool]()
+	r := New[*bool]()
 	txn := NewTxn(r)
 	oldV := txn.Delete(nil)
 	require.Nil(t, oldV)
@@ -180,7 +180,7 @@ func TestRoot(t *testing.T) {
 }
 
 func TestInsertUpdateDelete(t *testing.T) {
-	r := New[bool]()
+	r := New[*bool]()
 	s := []string{"", "A", "AB"}
 
 	for _, ss := range s {
@@ -238,7 +238,7 @@ func findIndex(vs []string, v string) int {
 }
 
 func TestIteratePrefix(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 
 	keys := []string{
 		"foo/bar/baz",
@@ -551,7 +551,7 @@ func TestIterateLowerBound(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("case%03d", idx), func(t *testing.T) {
-			r := New[string]()
+			r := New[*string]()
 
 			// Insert keys
 			txn := NewTxn(r)
@@ -1511,7 +1511,7 @@ func TestIterateBack(t *testing.T) {
 
 	for idx, test := range cases {
 		t.Run(fmt.Sprintf("case%03d", idx), func(t *testing.T) {
-			r := New[string]()
+			r := New[*string]()
 
 			// Insert keys
 			txn := NewTxn(r)
@@ -1558,7 +1558,7 @@ func TestIterateBack(t *testing.T) {
 
 func TestIterateBackFuzz(t *testing.T) {
 	for range 10 {
-		r := New[string]()
+		r := New[*string]()
 		txn := NewTxn(r)
 
 		rand := mathrand.New(mathrand.NewSource(time.Now().UnixNano()))
@@ -1641,7 +1641,7 @@ func (s readableString) Generate(rand *mathrand.Rand, _ int) reflect.Value {
 }
 
 func TestIterateLowerBoundFuzz(t *testing.T) {
-	r := New[readableString]()
+	r := New[*readableString]()
 	set := []string{}
 
 	// This specifies a property where each call adds a new random key to the radix
@@ -1701,7 +1701,7 @@ func TestIterateLowerBoundFuzz(t *testing.T) {
 }
 
 func TestIteratePrefixAndLowerBound(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 
 	keys := []string{
 		"foo/bar/baz",
@@ -1840,7 +1840,7 @@ func TestIteratePrefixAndLowerBound(t *testing.T) {
 }
 
 func TestMergeChildNilEdges(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 	txn := NewTxn(r)
 	txn.Insert([]byte("foobar"), lo.ToPtr(42))
 	txn.Insert([]byte("foozip"), lo.ToPtr(43))
@@ -1864,7 +1864,7 @@ func TestMergeChildNilEdges(t *testing.T) {
 }
 
 func TestMergeChildVisibility(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 	txn := NewTxn(r)
 	txn.Insert([]byte("foobar"), lo.ToPtr(42))
 	txn.Insert([]byte("foobaz"), lo.ToPtr(43))
@@ -1931,7 +1931,7 @@ func TestMergeChildVisibility(t *testing.T) {
 }
 
 func TestClone(t *testing.T) {
-	r := New[int]()
+	r := New[*int]()
 
 	t1 := NewTxn(r)
 	t1.Insert([]byte("foo"), lo.ToPtr(7))
