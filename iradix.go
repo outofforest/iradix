@@ -10,12 +10,12 @@ import (
 // hash map is prefix-based lookups and ordered iteration. The immutability
 // means that it is safe to concurrently read from a Tree without any
 // coordination.
-func New[T any]() *Node[T] {
+func New[T comparable]() *Node[T] {
 	return &Node[T]{}
 }
 
 // NewTxn creates new transaction that can be used to mutate the tree.
-func NewTxn[T any](root *Node[T]) *Txn[T] {
+func NewTxn[T comparable](root *Node[T]) *Txn[T] {
 	return &Txn[T]{
 		revision: root.revision + 1,
 		root:     root,
@@ -25,7 +25,8 @@ func NewTxn[T any](root *Node[T]) *Txn[T] {
 // Txn is a transaction on the tree. This transaction is applied
 // atomically and returns a new tree when committed. A transaction
 // is not thread safe, and should only be used by a single goroutine.
-type Txn[T any] struct {
+type Txn[T comparable] struct {
+	t        T
 	revision uint64
 
 	// root is the modified root for the transaction.
@@ -41,13 +42,13 @@ func (t *Txn[T]) Root() *Node[T] {
 
 // Get is used to lookup a specific key, returning
 // the value and if it was found.
-func (t *Txn[T]) Get(k []byte) *T {
+func (t *Txn[T]) Get(k []byte) T {
 	return t.root.Get(k)
 }
 
 // Insert is used to add or update a given key. The return provides
 // the previous value and a bool indicating if any was set.
-func (t *Txn[T]) Insert(k []byte, v *T) *T {
+func (t *Txn[T]) Insert(k []byte, v T) T {
 	if k == nil {
 		k = []byte{}
 	}
@@ -75,7 +76,7 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 				value:    v,
 				prefix:   copyPrefix(search),
 			})
-			return nil
+			return t.t
 		}
 
 		// Determine longest prefix of the search key on match.
@@ -102,7 +103,7 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 		search = search[commonPrefix:]
 		if len(search) == 0 {
 			splitNode.value = v
-			return nil
+			return t.t
 		}
 
 		// Create a new edge for the node.
@@ -111,13 +112,13 @@ func (t *Txn[T]) Insert(k []byte, v *T) *T {
 			value:    v,
 			prefix:   copyPrefix(search),
 		})
-		return nil
+		return t.t
 	}
 }
 
 // Delete is used to delete a given key. Returns the old value if any,
 // and a bool indicating if the key was set.
-func (t *Txn[T]) Delete(k []byte) *T {
+func (t *Txn[T]) Delete(k []byte) T {
 	if k == nil {
 		k = []byte{}
 	}
@@ -193,17 +194,17 @@ func (t *Txn[T]) mergeChild(n *Node[T]) {
 	}
 }
 
-func (t *Txn[T]) delete(n *Node[T], search []byte) (*Node[T], *T) {
+func (t *Txn[T]) delete(n *Node[T], search []byte) (*Node[T], T) {
 	// Check for key exhaustion.
 	if len(search) == 0 {
-		if n.value == nil {
-			return nil, nil
+		if n.value == t.t {
+			return nil, t.t
 		}
 
 		// Remove the leaf node.
 		nc := t.writeNode(n)
 		oldValue := nc.value
-		nc.value = nil
+		nc.value = t.t
 
 		// Check if this node should be merged.
 		if n != t.root && len(nc.edges) == 1 {
@@ -216,23 +217,23 @@ func (t *Txn[T]) delete(n *Node[T], search []byte) (*Node[T], *T) {
 	label := search[0]
 	idx, child := n.getEdge(label)
 	if child == nil || !bytes.HasPrefix(search, child.prefix) {
-		return nil, nil
+		return nil, t.t
 	}
 
 	// Consume the search prefix
 	search = search[len(child.prefix):]
 	newChild, oldValue := t.delete(child, search)
 	if newChild == nil {
-		return nil, nil
+		return nil, t.t
 	}
 
 	// Copy this node.
 	nc := t.writeNode(n)
 
 	// Delete the edge if the node has no edges.
-	if newChild.value == nil && len(newChild.edges) == 0 {
+	if newChild.value == t.t && len(newChild.edges) == 0 {
 		nc.delEdge(label)
-		if n != t.root && len(nc.edges) == 1 && nc.value == nil {
+		if n != t.root && len(nc.edges) == 1 && nc.value == t.t {
 			t.mergeChild(nc)
 		}
 	} else {
