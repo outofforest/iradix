@@ -12,7 +12,6 @@ import (
 	"testing/quick"
 	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -147,17 +146,17 @@ func TestRoot(t *testing.T) {
 	r = txn.Commit()
 
 	txn = NewTxn(r)
-	oldV = txn.Insert(nil, lo.ToPtr(true))
+	oldV = txn.Insert(nil, new(true))
 	require.Nil(t, oldV)
 	r = txn.Commit()
 
 	txn = NewTxn(r)
-	oldV = txn.Insert(nil, lo.ToPtr(false))
+	oldV = txn.Insert(nil, new(false))
 	require.True(t, *oldV)
 	r = txn.Commit()
 
 	txn = NewTxn(r)
-	oldV = txn.Insert(nil, lo.ToPtr(true))
+	oldV = txn.Insert(nil, new(true))
 	require.False(t, *oldV)
 	r = txn.Commit()
 
@@ -185,7 +184,7 @@ func TestInsertUpdateDelete(t *testing.T) {
 
 	for _, ss := range s {
 		txn := NewTxn(r)
-		oldV := txn.Insert([]byte(ss), lo.ToPtr(false))
+		oldV := txn.Insert([]byte(ss), new(false))
 		require.Nil(t, oldV)
 		r = txn.Commit()
 	}
@@ -203,7 +202,7 @@ func TestInsertUpdateDelete(t *testing.T) {
 
 	for _, ss := range s {
 		txn := NewTxn(r)
-		oldV := txn.Insert([]byte(ss), lo.ToPtr(true))
+		oldV := txn.Insert([]byte(ss), new(true))
 		require.False(t, *oldV)
 		r = txn.Commit()
 	}
@@ -1842,8 +1841,8 @@ func TestIteratePrefixAndLowerBound(t *testing.T) {
 func TestMergeChildNilEdges(t *testing.T) {
 	r := New[*int]()
 	txn := NewTxn(r)
-	txn.Insert([]byte("foobar"), lo.ToPtr(42))
-	txn.Insert([]byte("foozip"), lo.ToPtr(43))
+	txn.Insert([]byte("foobar"), new(42))
+	txn.Insert([]byte("foozip"), new(43))
 	txn.Delete([]byte("foobar"))
 	r = txn.Commit()
 
@@ -1866,9 +1865,9 @@ func TestMergeChildNilEdges(t *testing.T) {
 func TestMergeChildVisibility(t *testing.T) {
 	r := New[*int]()
 	txn := NewTxn(r)
-	txn.Insert([]byte("foobar"), lo.ToPtr(42))
-	txn.Insert([]byte("foobaz"), lo.ToPtr(43))
-	txn.Insert([]byte("foozip"), lo.ToPtr(10))
+	txn.Insert([]byte("foobar"), new(42))
+	txn.Insert([]byte("foobaz"), new(43))
+	txn.Insert([]byte("foozip"), new(10))
 	r = txn.Commit()
 
 	txn1 := NewTxn(r)
@@ -1896,7 +1895,7 @@ func TestMergeChildVisibility(t *testing.T) {
 	// in-place to point to the new "foobaz" node. This in-place update
 	// will cause the visibility of the update to leak into txn1 (prior
 	// to the fix).
-	txn2.Insert([]byte("foobaz"), lo.ToPtr(44))
+	txn2.Insert([]byte("foobaz"), new(44))
 
 	// Ensure we get the expected value foobar and foobaz
 	if val := txn1.Get([]byte("foobar")); val == nil || *val != 42 {
@@ -1934,11 +1933,11 @@ func TestClone(t *testing.T) {
 	r := New[*int]()
 
 	t1 := NewTxn(r)
-	t1.Insert([]byte("foo"), lo.ToPtr(7))
+	t1.Insert([]byte("foo"), new(7))
 	t2 := t1.Clone()
 
-	t1.Insert([]byte("bar"), lo.ToPtr(42))
-	t2.Insert([]byte("baz"), lo.ToPtr(43))
+	t1.Insert([]byte("bar"), new(42))
+	t2.Insert([]byte("baz"), new(43))
 
 	if val := t1.Get([]byte("foo")); val == nil || *val != 7 {
 		t.Fatalf("bad foo in t1")
